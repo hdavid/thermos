@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv='Content-type' content='text/html; charset=utf-8'>
+    <title>Thermos</title>
+  </head>
+	<style type="text/css" media="screen"> @import url("site.css");   </style>
+  <body>
+	
+	<script src="js/react.js"></script>
+	<script src="js/JSXTransformer.js"></script>
+	<script src="js/jquery-1.10.0.min.js"></script>
+	<script src="thermos.js" type="text/jsx"></script>
+
+   	<h1>Thermos</h1>
+
+	<div id='notice'></div>
+	
+	<div id="status"></div> 
+	
+	<div id="configForm"></div>
+	
+	<div id="schedule"></div>
+	<br/>
+	<div id="scheduleEntryForm"></div>
+	
+	<div id="test"></div>
+
+    <script type="text/jsx">
+
+		var rest_api = "";//use ourselves as api url. so we can leave that empty.
+	
+		React.render(
+		  	<ConfigForm url={rest_api+"config.json"} name="config"/>, 
+			document.getElementById('configForm')
+		);
+	
+		React.render(
+			<Status url={rest_api+"status.json"} name="status"/>,
+			document.getElementById('status')
+		);
+
+		React.render(
+			<Schedule url={rest_api+"schedule.json"} name="schedule"/>,
+			document.getElementById('schedule')
+		);
+	
+    </script>
+  </body>
+</html>

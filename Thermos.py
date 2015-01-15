@@ -1,0 +1,312 @@
+#!/usr/bin/python
+from Logger import Logger
+from Schedule import Schedule, ScheduleEntry
+import datetime
+import time
+import traceback
+import json
+import random
+import os
+import os.path
+import glob
+import time
+from config import *
+
+try: 
+	import RPi.GPIO as GPIO
+	THERMOS_HAS_GPIO = True
+except:
+	THERMOS_HAS_GPIO = False
+
+class Thermos(Logger):
+
+	def __init__(self):
+		self._schedule_filename = "schedule.json"
+		self._schedule = None
+		self._current_temperature = 19
+		self._active_schedule_entry = None
+		self._heating = None
+		self._margin = thermos_margin
+		self._update_interval = thermos_update_interval
+		self._minutes_between_status_updates = 1
+		self._mode = None
+		self._config_filename = "config.json"
+		self._temperature_sensor_device_file = None
+		self._config_file_date = None
+		self._status_filename = "status.json"
+		self._manual_temperature = None
+		self._config_needs_saving = False
+		self._status_changed = False
+		self._last_button_press = datetime.datetime.now()
+		self._last_status_written = datetime.datetime.now()
+		
+	def _setup_hardware(self):
+		
+		if THERMOS_HAS_GPIO:
+			
+			#temperature sensor
+			try:
+				os.system('modprobe w1-gpio')
+				os.system('modprobe w1-therm')
+				base_dir = '/sys/bus/w1/devices/'
+				device_folder = glob.glob(base_dir + '28*')[0]
+				self._temperature_sensor_device_file = device_folder + '/w1_slave'
+			except:
+				self._error("could not locating temperature sensor file. will use random values for temperature")
+				
+			#GPIO SETUP
+			GPIO.setmode(GPIO.BCM)
+			GPIO.setwarnings(False)
+			GPIO.cleanup()
+			
+			#led pins
+			GPIO.setup(thermos_gpio_heating_led,GPIO.OUT)
+			GPIO.setup(thermos_gpio_schedule_led,GPIO.OUT)
+			GPIO.setup(thermos_gpio_manual_led,GPIO.OUT)
+		
+			#mode button
+			GPIO.setup(thermos_gpio_mode_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+			GPIO.add_event_detect(thermos_gpio_mode_button, GPIO.RISING, callback=self._button_callback) 
+			#manual temperature up button
+			GPIO.setup(thermos_gpio_up_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+			GPIO.add_event_detect(thermos_gpio_up_button, GPIO.RISING, callback=self._button_callback)
+			#manual temperature down button
+			GPIO.setup(thermos_gpio_down_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+			GPIO.add_event_detect(thermos_gpio_down_button, GPIO.RISING, callback=self._button_callback)
+			
+		else:
+			self._error("no GPIO kernel module found. will use dummy temperature readings. make sure you installed the kernel modules.")
+			
+	
+	def _cleanup_hardware(self):
+		if THERMOS_HAS_GPIO:
+			GPIO.output(thermos_gpio_schedule_led,GPIO.LOW)
+			GPIO.output(thermos_gpio_manual_led,GPIO.LOW)
+			GPIO.output(thermos_gpio_heating_led,GPIO.LOW)
+			
+	def _button_callback(self, channel):
+		#debounce
+		if self._last_button_press + datetime.timedelta(0,0.3) < datetime.datetime.now():
+			self._last_button_press = datetime.datetime.now()
+			if channel == self._gpio_mode_button:
+				if self._mode == None or self._mode == "schedule":
+					self._mode = "manual"
+				elif self._mode == "manual":
+					self._mode = "off"
+				else:
+					self._mode = "schedule"
+				self._info("mode changed by button press to "+str(self._mode))
+				self._config_needs_saving = True
+				self._status_changed = True
+			
+			elif channel == self._gpio_up_button or channel == self._gpio_down_button:
+				if channel == self._gpio_up_button:
+					inc = 1
+				else:
+					inc = -1
+				self._manual_temperature = self._manual_temperature + inc
+				self._info("manual temperature changed button press to "+str(self._manual_temperature))
+				self._config_needs_saving = True
+				self._status_changed = True
+			
+	def run(self):
+		
+		self._info("starting Thermos")
+	
+		#initialise what should be initialised.
+		self._setup_hardware()
+				
+		#load schedule
+		self._schedule = Schedule(filename=self._schedule_filename)
+		
+		#and run for ever
+		try: 
+			while self._should_run():
+				
+				#handle button presses
+				if self._config_needs_saving:
+					self._config_needs_saving = False
+					self._write_config()
+					
+				#check if config or schedule should be reloaded 	
+				self._reload_config()
+				self._schedule.reload()
+				
+				#get schedule entry
+				active_schedule_entry =  self._schedule.get_active_entry()
+				if self._active_schedule_entry != active_schedule_entry:
+					self._active_schedule_entry = active_schedule_entry
+				
+				self._read_current_temperature()
+				self._update_heating()
+				
+				#update only when needed
+				if self._status_changed:
+					self._status_changed=False
+					self._log_status()
+					self._write_status()
+					self._update_hardware()
+					
+				#write status every n minutes anyways.
+				if self._last_status_written + datetime.timedelta(0,60*self._minutes_between_status_updates) < datetime.datetime.now():
+					self._write_status()
+					
+				time.sleep(self._update_interval)
+		
+		except KeyboardInterrupt: 
+			self._info("keyboard interrupt, exiting.")
+			self._cleanup_hardware()
+			
+			
+	@property
+	def _scheduled_temperature(self):
+		if self._mode == "manual":
+			if self._manual_temperature==None:
+				return 0
+			else:
+				return self._manual_temperature
+		elif self._mode == "schedule":
+			if self._active_schedule_entry == None:
+				return 0 
+			else:
+				return self._active_schedule_entry.temperature
+		else:
+			return 0
+	
+	def _should_run(self):
+		return True
+		
+	def _reload_config(self):
+		if(self._config_filename != None):
+			
+			
+			if self._config_file_date==None or self._config_file_date != os.path.getmtime(self._config_filename):
+				try:
+					self._info("loading config from '"+self._config_filename+"'")
+					self._load_config()
+				except Exception:
+					self._error("could not reload config file '"+self._config_filename+"'")
+					traceback.print_exc()
+					
+
+	def _load_config(self):
+		json_file = open(self._config_filename)
+		json_data = json.load(json_file)
+		json_file.close()
+		if "mode" in json_data and (self._mode == None or self._mode != json_data["mode"]):
+			self._info("mode changed to "+json_data["mode"]+" (was "+str(self._mode)+")")
+			self._mode = json_data["mode"]
+			self._status_changed = True
+		if "manual_temperature" in json_data and (self._manual_temperature == None or self._manual_temperature != float(json_data["manual_temperature"])):
+			self._info("manual temperature changed to "+str(json_data["manual_temperature"])+" (was "+str(self._manual_temperature)+")")
+			self._manual_temperature = float(json_data["manual_temperature"])
+			self._status_changed = True
+		self._config_file_date = os.path.getmtime(self._config_filename)#datetime.datetime.now()
+
+
+	def _write_config(self):
+		try:
+			out = "{"
+			i = 0
+			if self._mode!=None:
+				out = out + "\n\t\"mode\":\""+self._mode+"\""
+				i = i+1
+			if self._manual_temperature!=None:
+				if i>0:
+					out = out + ","
+				out = out + "\n\t\"manual_temperature\":"+str(self._manual_temperature)
+			out = out + "\n}"
+			self._info("writing config to '"+self._config_filename+"'")
+			f = open(self._config_filename,'w')
+			f.write(out)
+			f.close()
+			self._config_file_date != os.path.getmtime(self._config_filename)
+		except Exception:
+			self._error("could not write config to '"+self._config_filename+"'")
+			traceback.print_exc()
+		
+		
+	def _update_heating(self):			
+		if self._mode == "manual" or self._mode == "schedule":
+			if self._current_temperature + self._margin <= self._scheduled_temperature and (not self._heating or self._heating == None):
+				self._heating = True
+				self._status_changed = True
+			if self._current_temperature >= self._scheduled_temperature + self._margin and (self._heating or self._heating == None):
+				self._heating = False
+				self._status_changed = True
+		else:
+			if self._heating or self._heating == None:
+				self._heating = False
+				self._status_changed = True
+				
+						
+	def _read_current_temperature(self):
+		try:
+			if self._temperature_sensor_device_file != None:
+				f = open(self._temperature_sensor_device_file, 'r')
+				lines = f.readlines()
+				f.close()
+				while lines[0].strip()[-3:] != 'YES':
+					time.sleep(0.2)
+					lines = read_temp_raw()
+				equals_pos = lines[1].find('t=')
+				if equals_pos != -1:
+					temp_string = lines[1][equals_pos+2:]
+					temp_c = float(temp_string) / 1000.0
+					self._current_temperature = temp_c
+			else:
+				r = 0.1 * (0.5-random.random())
+				if self._current_temperature+r > 15 and self._current_temperature+r < 25:
+					self._current_temperature = self._current_temperature + r
+		except:
+			self._error("could not read temperature from sensor.")
+			traceback.print_exc()
+			
+
+	def _update_hardware(self):
+		
+		if THERMOS_HAS_GPIO:
+			if self._heating!=None and self._heating:
+				GPIO.output(thermos_gpio_heating_led,GPIO.HIGH)
+			else:
+				GPIO.output(thermos_gpio_heating_led,GPIO.LOW)
+		
+			if self._mode=="off" or self._mode==None:	
+				GPIO.output(thermos_gpio_schedule_led,GPIO.LOW)
+				GPIO.output(thermos_gpio_manual_led,GPIO.LOW)
+			elif self._mode=="manual":	
+				GPIO.output(thermos_gpio_schedule_led,GPIO.LOW)
+				GPIO.output(thermos_gpio_manual_led,GPIO.HIGH)
+			else:
+				#schedule
+				GPIO.output(thermos_gpio_schedule_led,GPIO.HIGH)
+				GPIO.output(thermos_gpio_manual_led,GPIO.LOW)
+			
+
+	def _write_status(self):
+		try:
+			out = "{"
+			if(self._heating):
+				out = out + "\n\t\"heating\":true,"
+			out = out + "\n\t\"current_temperature\":"+str(self._current_temperature)+","
+			out = out + "\n\t\"mode\":\""+str(self._mode)+"\","
+			out = out + "\n\t\"scheduled_temperature\":"+str(self._scheduled_temperature)+""
+			if self._active_schedule_entry!=None:
+				out = out + ",\n\t\"active_schedule_entry\":"+str(self._active_schedule_entry.to_json())
+			out = out + "\n}"
+			f = open('status.json','w')
+			f.write(out)
+			f.close()
+			self._last_status_written = datetime.datetime.now()
+		except:
+			self._error("could not write status file")
+			traceback.print_exc()
+		
+			
+	def _log_status(self):
+		self._info("mode:"+str(self._mode)+" temperature:"+str(self._current_temperature)+" - target:"+str(self._scheduled_temperature)+" - heating:"+str(self._heating)+" - active schedule : " + str(self._active_schedule_entry))
+
+
+if __name__ == '__main__':
+	thermos = Thermos()
+	thermos.run()
