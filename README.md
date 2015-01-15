@@ -1,9 +1,9 @@
 
 #Thermos is programable thermostat running on Raspberry PI.
 
+Web app using Fask and React JS to control Thermos remotely and modify the schedule.
 
-Web app using Fask and React JS to control Thermos remotely and modify the schedule
-Hardware buttons to change mode (auto, manual, off), increase and decrease manual temperature
+Hardware buttons to change mode (auto, manual, off), increase and decrease manual temperature.
 
 ##Requirements
 - Raspberry Pi (A or B)
@@ -13,21 +13,23 @@ Hardware buttons to change mode (auto, manual, off), increase and decrease manua
 - A relay : connected to the led indicating heating, to control your heating or whatever electrical device you fancy. http://store.arduino.cc/product/T010010
 
 ##Hardware setup 
-The hardware setup is very simple : three buttons, three leds, and thermal sensor. 
+The hardware setup is very simple : three push buttons, three leds, some resitors and thermal sensor.
+ 
 all of which is described in https://www.modmypi.com/raspberry-pi-youtube-workshop-kit
 	
 ##Run It
-sudo thermos/start.sh
+run `sudo thermos/start.sh`
 
 ##Start Thermos at boot time :
 add to `/etc/rc.local` : `/bin/bash /home/pi/thermos/start.sh &`
 
 ##Stop Thermos
-not very clean but does the job : sudo killall python
+not very clean but does the job : `sudo killall python`
 
 ##Access the Web App
 http://my-raspberry-pi:8080/
-login and password are configured in config.py
+
+login and password are configured in `config.py`
 
 ##Files
 - `RestApi.py` : rest api and web app.
