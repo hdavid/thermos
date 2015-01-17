@@ -88,7 +88,7 @@ class Thermos(Logger):
 		#debounce
 		if self._last_button_press + datetime.timedelta(0,0.3) < datetime.datetime.now():
 			self._last_button_press = datetime.datetime.now()
-			if channel == self._gpio_mode_button:
+			if channel == thermos_gpio_mode_button:
 				if self._mode == None or self._mode == "schedule":
 					self._mode = "manual"
 				elif self._mode == "manual":
@@ -99,8 +99,8 @@ class Thermos(Logger):
 				self._config_needs_saving = True
 				self._status_changed = True
 			
-			elif channel == self._gpio_up_button or channel == self._gpio_down_button:
-				if channel == self._gpio_up_button:
+			elif channel == thermos_gpio_up_button or channel == thermos_gpio_down_button:
+				if channel == thermos_gpio_up_button:
 					inc = 1
 				else:
 					inc = -1
