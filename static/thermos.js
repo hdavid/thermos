@@ -80,20 +80,26 @@ var ConfigForm = React.createClass({
 			this.mustSave=false;
 		}
 		var schedule_checked = this.state.mode=="schedule" ? true : false;
-		var on_checked = this.state.mode=="manual" ? true : false;
+		var manual_checked = this.state.mode=="manual" ? true : false;
 		var off_checked = this.state.mode=="off" ? true : false;
+		var schedule_class = this.state.mode=="schedule" ? "button on" : "button off";
+		var manual_class =  this.state.mode=="manual" ? "button on" : "button off";
+		var off_class = this.state.mode=="off" ? "button on" : "button off";
 		var manual_temperature = this.state.manual_temperature;
+		var displayNone = {
+			display: 'none'
+		};
 		//alert(JSON.stringify(this.state));
 		return (
 			<div>
 			<h2>Config</h2>
 		     <div>
-					<input type="radio" name='mode' value="schedule" id="mode_schedule" defaultChecked={schedule_checked} onChange={this.handleChange} />
-					<label htmlFor="mode_schedule">schedule</label>&nbsp;
-					<input type="radio" name='mode' value="manual" id="mode_manual" defaultChecked={on_checked} onChange={this.handleChange}/>
-					<label htmlFor="mode_manual">manual</label>&nbsp;
-					<input type="radio" name='mode' value="off" id="mode_off" defaultChecked={off_checked} onChange={this.handleChange}/>
-					<label htmlFor="mode_off">off</label>&nbsp;
+					<input type="radio" style={displayNone} name='mode' value="schedule" id="mode_schedule" defaultChecked={schedule_checked} onChange={this.handleChange} />
+					<label htmlFor="mode_schedule" className={schedule_class}>schedule</label>&nbsp;
+					<input type="radio" style={displayNone} name='mode' value="manual" id="mode_manual" defaultChecked={manual_checked} onChange={this.handleChange}/>
+					<label htmlFor="mode_manual" className={manual_class}>manual</label>&nbsp;
+					<input type="radio" style={displayNone} name='mode' value="off" id="mode_off" defaultChecked={off_checked} onChange={this.handleChange}/>
+					<label htmlFor="mode_off" className={off_class}>off</label>&nbsp;
 					<br/>
 					<label htmlFor='manual_temperature'>manual temperature</label>&nbsp;
 					<input id="manual_temperature" name="manual_temperature" type="text" size="4" defaultValue={manual_temperature} onChange={this.handleChange}/>
@@ -255,6 +261,8 @@ var ScheduleEntryForm = React.createClass({
 		var end_time = this.state.end_time;
 		var temperature = this.state.temperature;
 		var active = this.state.active?"manual":"";
+		var active_class = this.state.active?"button on" : "button off";
+		var active_text = this.state.active?"active" : "inactive";
 		var mon = this.state.days_of_the_week.indexOf(0)>=0?"mon":"";
 		var tue = this.state.days_of_the_week.indexOf(1)>=0?"tue":"";
 		var wed = this.state.days_of_the_week.indexOf(2)>=0?"wed":"";
@@ -262,11 +270,21 @@ var ScheduleEntryForm = React.createClass({
 		var fri = this.state.days_of_the_week.indexOf(4)>=0?"fri":"";
 		var sat = this.state.days_of_the_week.indexOf(5)>=0?"sat":"";
 		var sun = this.state.days_of_the_week.indexOf(6)>=0?"sun":"";
+		var mon_class = this.state.days_of_the_week.indexOf(0)>=0 ? "button on" : "button off";
+		var tue_class = this.state.days_of_the_week.indexOf(1)>=0 ? "button on" : "button off";
+		var wed_class = this.state.days_of_the_week.indexOf(2)>=0 ? "button on" : "button off";
+		var thu_class = this.state.days_of_the_week.indexOf(3)>=0 ? "button on" : "button off";
+		var fri_class = this.state.days_of_the_week.indexOf(4)>=0 ? "button on" : "button off";
+		var sat_class = this.state.days_of_the_week.indexOf(5)>=0 ? "button on" : "button off";
+		var sun_class = this.state.days_of_the_week.indexOf(6)>=0 ? "button on" : "button off";
+		var displayNone = {
+			display: 'none'
+		};
 		return(
 		<div>	
 			<fieldset>
-				<label htmlFor='active'>active</label>&nbsp;
-				<input type="checkbox" name="active" id="active" defaultChecked={active} key={"active"+active} onChange={this.handleChange} />
+				<label htmlFor='active' className={active_class}>{active_text}</label>&nbsp;
+				<input type="checkbox" style={displayNone} name="active" id="active" defaultChecked={active} key={"active"+active} onChange={this.handleChange} />
 				<br/>
 				<label htmlFor='temperature'>temperature</label>&nbsp;
 				<input name="temperature" id="temperature" type="text" size="2" defaultValue={temperature} onChange={this.handleChange} size="5"/>
@@ -278,20 +296,20 @@ var ScheduleEntryForm = React.createClass({
 				<input name="end_time" id="end_time" defaultValue={end_time} onChange={this.handleChange} size="5"/>
 				<br/>
 				days : &nbsp;
-				<label htmlFor='weekdayMon'>mon</label>
-				<input type="checkbox" name="weekdayMon" id="weekdayMon" defaultChecked={mon} key={"mon"+mon} onChange={this.toggleDay.bind(this,0)} />
-				<label htmlFor='weekdayTue'>tue</label>
-				<input type="checkbox" name="weekdayTue" id="weekdayTue" defaultChecked={tue} key={"tue"+tue} onChange={this.toggleDay.bind(this,1)} />
-				<label htmlFor='weekdayWed'>wed</label>
-				<input type="checkbox" name="weekdayWed" id="weekdayWed" defaultChecked={wed} key={"wed"+wed} onChange={this.toggleDay.bind(this,2)} />
-				<label htmlFor='weekdayThu'>thu</label>
-				<input type="checkbox" name="weekdayThu" id="weekdayThu" defaultChecked={thu} key={"thu"+thu} onChange={this.toggleDay.bind(this,3)} />
-				<label htmlFor='weekdayFri'>fri</label>
-				<input type="checkbox" name="weekdayFri" id="weekdayFri" defaultChecked={fri} key={"fri"+fri} onChange={this.toggleDay.bind(this,4)} />
-				<label htmlFor='weekdaySat'>sat</label>
-				<input type="checkbox" name="weekdaySat" id="weekdaySat" defaultChecked={sat} key={"sat"+sat} onChange={this.toggleDay.bind(this,5)} />
-				<label htmlFor='weekdaySun'>sun</label>
-				<input type="checkbox" name="weekdaySun" id="weekdaySun" defaultChecked={sun} key={"sun"+sun} onChange={this.toggleDay.bind(this,6)} />
+				<label htmlFor='weekdayMon' className={mon_class}>mon</label>
+				<input type="checkbox" name="weekdayMon" id="weekdayMon" style={displayNone} defaultChecked={mon} key={"mon"+mon} onChange={this.toggleDay.bind(this,0)} />
+				<label htmlFor='weekdayTue' className={tue_class}>tue</label>
+				<input type="checkbox" name="weekdayTue" id="weekdayTue" style={displayNone} defaultChecked={tue} key={"tue"+tue} onChange={this.toggleDay.bind(this,1)} />
+				<label htmlFor='weekdayWed' className={wed_class}>wed</label>
+				<input type="checkbox" name="weekdayWed" id="weekdayWed" style={displayNone} defaultChecked={wed} key={"wed"+wed} onChange={this.toggleDay.bind(this,2)} />
+				<label htmlFor='weekdayThu' className={thu_class}>thu</label>
+				<input type="checkbox" name="weekdayThu" id="weekdayThu" style={displayNone} defaultChecked={thu} key={"thu"+thu} onChange={this.toggleDay.bind(this,3)} />
+				<label htmlFor='weekdayFri' className={fri_class}>fri</label>
+				<input type="checkbox" name="weekdayFri" id="weekdayFri" style={displayNone} defaultChecked={fri} key={"fri"+fri} onChange={this.toggleDay.bind(this,4)} />
+				<label htmlFor='weekdaySat' className={sat_class}>sat</label>
+				<input type="checkbox" name="weekdaySat" id="weekdaySat" style={displayNone} defaultChecked={sat} key={"sat"+sat} onChange={this.toggleDay.bind(this,5)} />
+				<label htmlFor='weekdaySun' className={sun_class}>sun</label>
+				<input type="checkbox" name="weekdaySun" id="weekdaySun" style={displayNone} defaultChecked={sun} key={"sun"+sun} onChange={this.toggleDay.bind(this,6)} />
 				<br/>
 				select : &nbsp;
 				<a href="javascript:void(0)" onClick={this.setDaysOfTheWeek.bind(this,[0,1,2,3,4,5,6])}>all</a>&nbsp;

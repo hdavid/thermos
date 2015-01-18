@@ -10,13 +10,13 @@ body {
 }
 
 body, p, ul, li { 
-	font-size:12px;
+	ffont-size:12px;
 }
 
 #notice{
 	position:absolute;
 	left:50%;
-	margin-top:-80px;
+	margin-top:-40px;
 	margin-left:-200px;
 	width:400px;
 	background-color: #777;
@@ -42,6 +42,9 @@ div#center {
 	text-align:center;
 }
 
+*.button {padding:1px;margin:2px;border:1px solid #888888;background:#777777;}
+*.on {background:#aaaaaa;border:1px solid #bbbbbb;color:#eeeeee;}
+*.off {}
 
 h1, h2, h3, h4, h5 { color:white; padding-left:10px;padding-top:3px;padding-bottom:2px;}
 
