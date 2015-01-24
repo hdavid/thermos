@@ -111,6 +111,7 @@ class Thermos(Logger):
 			
 	def run(self):
 		
+		self._info("\n\n")
 		self._info("starting Thermos")
 	
 		#initialise what should be initialised.

@@ -1,15 +1,19 @@
 
 import datetime
 import time
+import logging
+
+logfile = open("thermos.log", "a") 
 
 class Logger(object):
    	
 	def _error(self, message):
 		now = datetime.datetime.now()
-		print(str(now) + " - ERROR: " + str(message))
-
+		logfile.write(str(now) + " - ERROR: " + str(message)+"\n")
+		logfile.flush()
+		
 	def _info(self, message):
 		now = datetime.datetime.now()
-		print(str(now) + " - " + str(message))
+		logfile.write(str(now) + " - " + str(message)+"\n")
+		logfile.flush()
 		
-	

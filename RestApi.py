@@ -60,6 +60,17 @@ def config_put():
 @requires_auth
 def config_get():
 	return get("config.json")
+	
+	
+@app.route('/thermos.log', methods=['GET'])
+@requires_auth
+def thermos_log_get():
+	return get("thermos.log"), 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/restApi.log', methods=['GET'])
+@requires_auth
+def restApi_log_get():
+	return get("restApi.log"), 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 @app.route('/')
 @requires_auth
