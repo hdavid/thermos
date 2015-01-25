@@ -153,7 +153,7 @@ class Thermos(Logger):
 				if self._last_status_written + datetime.timedelta(0,60*self._minutes_between_status_updates) < datetime.datetime.now():
 					self._write_status()
 			
-				if self._last_stats_written + datetime.timedelta(0,60) < datetime.datetime.now():
+				if self._last_stats_written + datetime.timedelta(0,60*5) < datetime.datetime.now():
 					self._write_stats()
 					
 				time.sleep(self._update_interval)

@@ -94,7 +94,6 @@ function getStats(req, filename, res){
 				timeseries[3].push([line[0],line[4]]);
 			}
 		}
-		info(JSON.stringify(timeseries))
 		var tt= {};
 		tt.timeseries = timeseries; 
 		tt.time = time; 

@@ -52,7 +52,7 @@
 	<a href="thermos.log">thermos.log</a>
 	<a href="restApi.log">restApi.log</a>
 	
-	<h2>Graph</h2>
+	<h2 onClick="requestPlot()">Graph</h2>
 	<div id="placeholder" class="demo-placeholder" style="width:100%;height:250px"></div>
 	<script type="text/javascript">
 
@@ -66,6 +66,23 @@
 					{ label: "actual", data: data.timeseries[3] },
 	 			],
 				{
+					legend:{           
+					            position: 'sw'
+					        },
+					
+							series: {
+								lines: {
+									show: true
+								},
+								points: {
+									show: true
+								}
+							},
+							grid: {
+								hoverable: true,
+								clickable: true
+							}
+				,
 					xaxis: { 
 						mode: "time",
 						min: data.time[0],
@@ -73,25 +90,63 @@
 					}
 				}
 			);
+			$("<div id='tooltip'></div>").css({
+				position: "absolute",
+				display: "none",
+				border: "1px solid #fdd",
+				padding: "2px",
+				"background-color": "#fee",
+				opacity: 0.80
+			}).appendTo("body");
+
+			$("#placeholder").bind("plothover", function (event, pos, item) {
+
+				if (false && $("#enablePosition:checked").length > 0) {
+					var str = "(" + pos.x.toFixed(2) + ", " + pos.y.toFixed(2) + ")";
+					$("#hoverdata").text(str);
+				}
+
+				if (true || $("#enableTooltip:checked").length > 0) {
+					if (item) {
+						var x = item.datapoint[0].toFixed(2),
+							y = item.datapoint[1].toFixed(2);
+
+						$("#tooltip").html(item.series.label + " : " + y)
+							.css({top: item.pageY+5, left: item.pageX+5})
+							.fadeIn(200);
+					} else {
+						$("#tooltip").hide();
+					}
+				}
+			});
+
+			$("#placeholder").bind("plotclick", function (event, pos, item) {
+				if (item) {
+					$("#clickdata").text(" - click point " + item.dataIndex + " in " + item.series.label);
+					plot.highlight(item.series, item.datapoint);
+				}
+			});
 		};
 		
-		$.ajax({
-      		url: 'stats.log',
-      		dataType: 'json',
-      		success: function(data) {
-				try {
-				    plot(data);
-				} catch(err) {
-					console.error('stats.log', status, err.message);
-					$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
-				}
-      		}.bind(this),
-      		error: function(xhr, status, err) {
-        		console.error('stats.log', status, err.toString());
-				$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
-      		}.bind(this)
-    	});
-
+		function requestPlot(){
+			$.ajax({
+	      		url: 'stats.log',
+	      		dataType: 'json',
+	      		success: function(data) {
+					try {
+					    plot(data);
+					} catch(err) {
+						console.error('stats.log', status, err.message);
+						$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
+					}
+	      		}.bind(this),
+	      		error: function(xhr, status, err) {
+	        		console.error('stats.log', status, err.toString());
+					$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
+	      		}.bind(this)
+	    	});
+		};
+		
 		</script>
 	
 		
