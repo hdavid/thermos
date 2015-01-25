@@ -11,6 +11,9 @@
 	<script src="js/JSXTransformer.js"></script>
 	<script src="js/jquery-1.10.0.min.js"></script>
 	<script src="thermos.js" type="text/jsx"></script>
+	<script src="js/jquery.flot.js"></script>
+	<script src="js/jquery.flot.time.js"></script>
+	<script src="thermos.js" type="text/jsx"></script>
 
    	<h1>Thermos</h1>
 
@@ -48,5 +51,49 @@
     </script>
 	<a href="thermos.log">thermos.log</a>
 	<a href="restApi.log">restApi.log</a>
+	
+	<h2>Graph</h2>
+	<div id="placeholder" class="demo-placeholder" style="width:100%;height:250px"></div>
+	<script type="text/javascript">
+
+		function plot(data) {
+			$.plot(
+				"#placeholder",
+				[
+					{ label: "mode", data: data.timeseries[0] },
+					{ label: "heating", data: data.timeseries[1] },
+					{ label: "scheduled", data: data.timeseries[2] },
+					{ label: "actual", data: data.timeseries[3] },
+	 			],
+				{
+					xaxis: { 
+						mode: "time",
+						min: data.time[0],
+						max: data.time[data.time.length-1] 
+					}
+				}
+			);
+		};
+		
+		$.ajax({
+      		url: 'stats.log',
+      		dataType: 'json',
+      		success: function(data) {
+				try {
+				    plot(data);
+				} catch(err) {
+					console.error('stats.log', status, err.message);
+					$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
+				}
+      		}.bind(this),
+      		error: function(xhr, status, err) {
+        		console.error('stats.log', status, err.toString());
+				$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
+      		}.bind(this)
+    	});
+
+		</script>
+	
+		
   </body>
 </html>

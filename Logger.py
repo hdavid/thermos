@@ -3,7 +3,7 @@ import datetime
 import time
 import logging
 
-logfile = open("thermos.log", "a") 
+logfile = open("logs/thermos.log", "a") 
 
 class Logger(object):
    	

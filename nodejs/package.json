@@ -1,11 +1,10 @@
 {
-  "name": "mock-config",
-	"description": "return mock configuration data for the people-id generic interface",
+  "name": "thermos-restAPI",
+	"description": "thermos rest api",
 	"version": "0.0.1",
 	"private": true,
 	"dependencies": {
 		"express": "4.x",
-		"underscore" : "1.x",
 		"body-parser" : "x.x",
 		"moment":"x.x",
 		"basic-auth-connect":"x.x"

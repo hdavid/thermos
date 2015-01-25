@@ -21,7 +21,7 @@ except:
 class Thermos(Logger):
 
 	def __init__(self):
-		self._schedule_filename = "schedule.json"
+		self._schedule_filename = "data/schedule.json"
 		self._schedule = None
 		self._current_temperature = 19
 		self._active_schedule_entry = None
@@ -30,15 +30,16 @@ class Thermos(Logger):
 		self._update_interval = thermos_update_interval
 		self._minutes_between_status_updates = 1
 		self._mode = None
-		self._config_filename = "config.json"
+		self._config_filename = "data/config.json"
 		self._temperature_sensor_device_file = None
 		self._config_file_date = None
-		self._status_filename = "status.json"
+		self._status_filename = "data/status.json"
 		self._manual_temperature = None
 		self._config_needs_saving = False
 		self._status_changed = False
 		self._last_button_press = datetime.datetime.now()
 		self._last_status_written = datetime.datetime.now()
+		self._last_stats_written = datetime.datetime.now()
 		
 	def _setup_hardware(self):
 		
@@ -151,6 +152,9 @@ class Thermos(Logger):
 				#write status every n minutes anyways.
 				if self._last_status_written + datetime.timedelta(0,60*self._minutes_between_status_updates) < datetime.datetime.now():
 					self._write_status()
+			
+				if self._last_stats_written + datetime.timedelta(0,60) < datetime.datetime.now():
+					self._write_stats()
 					
 				time.sleep(self._update_interval)
 		
@@ -295,7 +299,7 @@ class Thermos(Logger):
 			if self._active_schedule_entry!=None:
 				out = out + ",\n\t\"active_schedule_entry\":"+str(self._active_schedule_entry.to_json())
 			out = out + "\n}"
-			f = open('status.json','w')
+			f = open(self._status_filename,'w')
 			f.write(out)
 			f.close()
 			self._last_status_written = datetime.datetime.now()
@@ -303,11 +307,46 @@ class Thermos(Logger):
 			self._error("could not write status file")
 			traceback.print_exc()
 		
-			
+		
+		
 	def _log_status(self):
 		self._info("mode:"+str(self._mode)+" temperature:"+str(self._current_temperature)+" - target:"+str(self._scheduled_temperature)+" - heating:"+str(self._heating)+" - active schedule : " + str(self._active_schedule_entry))
 
+	def _write_stats(self):
+		self._last_stats_written=datetime.datetime.now()
+		
+		mode = 0
+		if(self._mode=="manual"):
+			mode = 1
+		if(self._mode=="schedule"):
+			mode=2
 
+		current_temperature = 0
+		if(self._current_temperature!=None):
+			current_temperature = self._current_temperature
+
+		heating = 0
+		if(self._heating!=None):
+			if(self._heating):
+				heating = 1
+
+		scheduled_temperature = 0
+		if(self._scheduled_temperature != None):
+			scheduled_temperature = self._scheduled_temperature
+
+		time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+		stat_file = open("data/stats.log", "a")
+		stat_file.write(str(self.unix_time_millis(datetime.datetime.now()))+"\t"+str(mode)+"\t"+str(heating)+"\t"+str(scheduled_temperature)+"\t"+str(current_temperature)+"\n")
+		stat_file.close()
+
+	def unix_time(self,dt):
+	    epoch = datetime.datetime.utcfromtimestamp(0)
+	    delta = dt - epoch
+	    return delta.total_seconds()
+
+	def unix_time_millis(self,dt):
+	    return self.unix_time(dt) * 1000.0
+	
 if __name__ == '__main__':
 	thermos = Thermos()
 	thermos.run()
