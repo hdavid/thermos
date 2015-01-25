@@ -71,16 +71,14 @@
 					        },
 					
 							series: {
-								lines: {
-									show: true
-								},
-								points: {
-									show: true
-								}
+								lines: {show: true},
+								points: {show: true}
 							},
 							grid: {
 								hoverable: true,
-								clickable: true
+								clickable: true,
+								backgroundColor: { colors: ["#999999", "#777777"] }
+								
 							}
 				,
 					xaxis: { 
@@ -93,9 +91,10 @@
 			$("<div id='tooltip'></div>").css({
 				position: "absolute",
 				display: "none",
-				border: "1px solid #fdd",
-				padding: "2px",
-				"background-color": "#fee",
+				border: "0px solid #666666",
+				padding: "3px",
+				color:'#999999',
+				"background-color": "#dddddd",
 				opacity: 0.80
 			}).appendTo("body");
 
