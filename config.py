@@ -1,9 +1,3 @@
-
-#Rest API
-restapi_login="mots"
-restapi_password="mots"
-restapi_port=8080
-
 #Thermos
 thermos_update_interval = 1
 thermos_margin = 1

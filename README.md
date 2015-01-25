@@ -1,30 +1,49 @@
 
 #Thermos is programable thermostat running on Raspberry PI.
 
-Web app using Fask and React JS to control Thermos remotely and modify the schedule.
+Web app using Node.JS and React JS to control Thermos remotely and modify the schedule.
 
 Hardware buttons to change mode (auto, manual, off), increase and decrease manual temperature.
 
 ##Requirements
 - Raspberry Pi (A or B)
-- Python. comes pre installed on Raspian)
-- Flask : Python Rest API. to install it run  sudo pip install flask
+- Python. comes pre installed on Raspian
+- NodeJS and some deps. see installation below.
 - Some electronics : leds, push buttons, thermal sensor, bread board, resistors. modmypi.com has a kit that provides most of what you need : https://www.modmypi.com/raspberry-pi-youtube-workshop-kit
 - A relay : connected to the led indicating heating, to control your heating or whatever electrical device you fancy. http://store.arduino.cc/product/T010010
+
+## Installation
+### thermos
+Just copy the content of the repository somewhere on your pi.
+
+### node JS
+to install node JS follow the following steps :
+
+```
+# do not install node js from debian repo, too old , but from this site.
+# from : http://weworkweplay.com/play/raspberry-pi-nodejs/
+wget http://node-arm.herokuapp.com/node_latest_armhf.deb 
+sudo dpkg -i node_latest_armhf.deb
+rm node_latest_armhf.deb
+# install npm 
+sudo apt-get update && sudo apt-get upgrade && sudo apt-get install npm
+#install deps using npm.
+npm install
+```
 
 ##Hardware setup 
 The hardware setup is very simple : three push buttons, three leds, some resitors and thermal sensor.
  
 all of which is described in https://www.modmypi.com/raspberry-pi-youtube-workshop-kit
 	
-##Run It
-run `sudo thermos/start.sh`
+##Start Thermos
+run `sudo ./start.sh`
+
+##Stop Thermos
+not very clean but does the job : `sudo ./stop.sh`
 
 ##Start Thermos at boot time :
 add to `/etc/rc.local` : `/bin/bash /home/pi/thermos/start.sh &`
-
-##Stop Thermos
-not very clean but does the job : `sudo killall python`
 
 ##Access the Web App
 http://my-raspberry-pi:8080/

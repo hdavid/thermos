@@ -1,6 +1,10 @@
 #!/bin/bash
-cd /home/pi/thermos
-/usr/bin/python /home/pi/thermos/RestApi.py &>> /home/pi/thermos/restApi.log  &
-/usr/bin/python /home/pi/thermos/Thermos.py & 
-#&>> /home/pi/thermos/thermos.log  &
+THERMOS_HOME="/home/pi/thermos"
+
+cd $THERMOS_HOME
+/usr/bin/python $THERMOS_HOME/Thermos.py & 
+
+cd $THERMOS_HOME/nodejs/
+/usr/local/bin/node $THERMOS_HOME/nodejs/node.js &>> $THERMOS_HOME/restApi.log  &
+
 exit 0
