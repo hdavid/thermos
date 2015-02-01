@@ -123,8 +123,8 @@ var Status = React.createClass({
       		success: function(data) {
 				try {
 					data.refresh = this.state.refresh;
-					//if(this.state.refresh){
-					setTimeout(this.load, 2000);
+					//if(refresh){
+					setTimeout(this.load, 60*1000);
 					//}
 				    this.setState(data);
 				} catch(err) {
@@ -137,7 +137,6 @@ var Status = React.createClass({
 				$('#notice').html("error loading "+this.props.name+" ! "+err.toString()).show().fadeOut(2000);
       		}.bind(this)
     	});
-		
 	},
   
 	componentDidMount: function() {
@@ -167,9 +166,9 @@ var Status = React.createClass({
 			<div>
 				<h2>Status</h2>
 				<ul>
-					<li>current temperature:{current_temperature}</li>
-					<li>heating: {heating}</li>
-					<li>mode: {mode}</li>
+					<li key={current_temperature}>current temperature:{current_temperature}</li>
+					<li key={heating}>heating: {heating}</li>
+					<li key={mode}>mode: {mode}</li>
 					<li>scheduled temperature:{scheduled_temperature}</li>
 					<li>current schedule: {active_schedule_entry?
 						<ScheduleEntry 

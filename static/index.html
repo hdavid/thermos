@@ -10,12 +10,14 @@
 	<script src="js/react.js"></script>
 	<script src="js/JSXTransformer.js"></script>
 	<script src="js/jquery-1.10.0.min.js"></script>
-	<script src="thermos.js" type="text/jsx"></script>
 	<script src="js/jquery.flot.js"></script>
 	<script src="js/jquery.flot.time.js"></script>
-	<script src="thermos.js" type="text/jsx"></script>
+	<script src="js/moment.js"></script>
 
-   	<h1>Thermos</h1>
+	
+	<script src="thermos.js" type="text/jsx"></script>
+	
+   	<!--h1>Thermos</h1-->
 
 	<div id='notice'></div>
 	
@@ -24,10 +26,9 @@
 	<div id="configForm"></div>
 	
 	<div id="schedule"></div>
-	<br/>
+
 	<div id="scheduleEntryForm"></div>
 	
-	<div id="test"></div>
 
     <script type="text/jsx">
 
@@ -49,42 +50,77 @@
 		);
 	
     </script>
+	
+	<h2>Logs</h2>
+
 	<a href="thermos.log">thermos.log</a>
 	<a href="restApi.log">restApi.log</a>
 	
 	<h2 onClick="requestPlot()">Graph</h2>
+	<select id='plot-year'>
+		<option value='2015'>2015</option>
+	</select>
+	<select id='plot-month'>
+		<option value='01'>01</option>
+		<option value='02'>02</option>
+		<option value='03'>03</option>
+		<option value='04'>04</option>
+		<option value='05'>05</option>
+		<option value='06'>06</option>
+		<option value='07'>07</option>
+		<option value='08'>08</option>
+		<option value='09'>09</option>
+		<option value='10'>10</option>
+		<option value='11'>11</option>
+		<option value='12'>12</option>
+	</select>
+	<a onClick="requestPlot(document.getElementById('plot-year').value,document.getElementById('plot-month').value)">load</a>
+		
+	<span id='oneDay'>1d</span>
+	<span id='twoDays'>2d</span>
+	<span id='sevenDays'>7d</span>
+	<span id='allDays'>all</span>
+	
 	<div id="placeholder" class="demo-placeholder" style="width:100%;height:250px"></div>
-	<script type="text/javascript">
 
-		function plot(data) {
+	<script type="text/javascript">
+		var d;
+		
+		function plot(start,end) {
+			var dd = [
+				{ label: "mode", data: d.timeseries[0] },
+				{ label: "heating", data: d.timeseries[1] },
+				{ label: "scheduled", data: d.timeseries[2] },
+				{ label: "actual", data: d.timeseries[3] },
+ 			];
+
+			if(!start){
+				start = d.time[0];
+			}
+			if(!end){
+				end =  d.time[d.time.length-1] 
+			}
+			
 			$.plot(
 				"#placeholder",
-				[
-					{ label: "mode", data: data.timeseries[0] },
-					{ label: "heating", data: data.timeseries[1] },
-					{ label: "scheduled", data: data.timeseries[2] },
-					{ label: "actual", data: data.timeseries[3] },
-	 			],
+				dd,
 				{
 					legend:{           
-					            position: 'sw'
-					        },
-					
-							series: {
-								lines: {show: true},
-								points: {show: true}
-							},
-							grid: {
-								hoverable: true,
-								clickable: true,
-								backgroundColor: { colors: ["#999999", "#777777"] }
-								
-							}
-				,
+						position: 'sw'
+					},
+					series: {
+						lines: {show: true},
+						points: {show: false}
+					},
+					grid: {
+						hoverable: true,
+						clickable: true,
+						backgroundColor: { colors: ["#999999", "#777777"] }	
+					},
 					xaxis: { 
 						mode: "time",
-						min: data.time[0],
-						max: data.time[data.time.length-1] 
+						min: start,
+						max: end 
 					}
 				}
 			);
@@ -127,26 +163,51 @@
 			});
 		};
 		
-		function requestPlot(){
+		function requestPlot(year,month){
+			var filename ;
+			if(year && month){
+				filename = 'stats/'+year+"/"+month; 
+			}else{
+				filename = 'stats/'+moment().format('YYYY/MM'); 
+			}
 			$.ajax({
-	      		url: 'stats.log',
+	      		url: filename,
 	      		dataType: 'json',
 	      		success: function(data) {
 					try {
-					    plot(data);
+						d = data;
+					    plot();
 					} catch(err) {
-						console.error('stats.log', status, err.message);
+						console.error(filename, status, err.message);
 						$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
 					}
 	      		}.bind(this),
 	      		error: function(xhr, status, err) {
-	        		console.error('stats.log', status, err.toString());
+	        		console.error(filename, status, err.toString());
 					$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
 	      		}.bind(this)
 	    	});
 		};
 		
-		</script>
+		$("#oneDay").click(function () {
+			var start = new Date()
+			start.setDate(start.getDate()-1);
+			plot((start).getTime(), (new Date()).getTime());
+		});
+		$("#twoDays").click(function () {
+			var start = new Date()
+			start.setDate(start.getDate()-2);
+			plot((start).getTime(), (new Date()).getTime());
+		});
+		$("#sevenDays").click(function () {
+			var start = new Date()
+			start.setDate(start.getDate()-7);
+			plot((start).getTime(), (new Date()).getTime());
+		});
+		$("#allDays").click(function () {
+			plot();
+		});
+	</script>
 	
 		
   </body>

@@ -10,7 +10,7 @@ import os
 import os.path
 import glob
 import time
-from config import *
+import config
 
 try: 
 	import RPi.GPIO as GPIO
@@ -26,9 +26,6 @@ class Thermos(Logger):
 		self._current_temperature = 19
 		self._active_schedule_entry = None
 		self._heating = None
-		self._margin = thermos_margin
-		self._update_interval = thermos_update_interval
-		self._minutes_between_status_updates = 1
 		self._mode = None
 		self._config_filename = "data/config.json"
 		self._temperature_sensor_device_file = None
@@ -61,19 +58,19 @@ class Thermos(Logger):
 			GPIO.cleanup()
 			
 			#led pins
-			GPIO.setup(thermos_gpio_heating_led,GPIO.OUT)
-			GPIO.setup(thermos_gpio_schedule_led,GPIO.OUT)
-			GPIO.setup(thermos_gpio_manual_led,GPIO.OUT)
+			GPIO.setup(config.thermos_gpio_heating_led,GPIO.OUT)
+			GPIO.setup(config.thermos_gpio_schedule_led,GPIO.OUT)
+			GPIO.setup(config.thermos_gpio_manual_led,GPIO.OUT)
 		
 			#mode button
-			GPIO.setup(thermos_gpio_mode_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-			GPIO.add_event_detect(thermos_gpio_mode_button, GPIO.RISING, callback=self._button_callback) 
+			GPIO.setup(config.thermos_gpio_mode_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+			GPIO.add_event_detect(config.thermos_gpio_mode_button, GPIO.RISING, callback=self._button_callback) 
 			#manual temperature up button
-			GPIO.setup(thermos_gpio_up_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-			GPIO.add_event_detect(thermos_gpio_up_button, GPIO.RISING, callback=self._button_callback)
+			GPIO.setup(config.thermos_gpio_up_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+			GPIO.add_event_detect(config.thermos_gpio_up_button, GPIO.RISING, callback=self._button_callback)
 			#manual temperature down button
-			GPIO.setup(thermos_gpio_down_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-			GPIO.add_event_detect(thermos_gpio_down_button, GPIO.RISING, callback=self._button_callback)
+			GPIO.setup(config.thermos_gpio_down_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+			GPIO.add_event_detect(config.thermos_gpio_down_button, GPIO.RISING, callback=self._button_callback)
 			
 		else:
 			self._error("no GPIO kernel module found. will use dummy temperature readings. make sure you installed the kernel modules.")
@@ -81,15 +78,15 @@ class Thermos(Logger):
 	
 	def _cleanup_hardware(self):
 		if THERMOS_HAS_GPIO:
-			GPIO.output(thermos_gpio_schedule_led,GPIO.LOW)
-			GPIO.output(thermos_gpio_manual_led,GPIO.LOW)
-			GPIO.output(thermos_gpio_heating_led,GPIO.LOW)
+			GPIO.output(config.thermos_gpio_schedule_led,GPIO.LOW)
+			GPIO.output(config.thermos_gpio_manual_led,GPIO.LOW)
+			GPIO.output(config.thermos_gpio_heating_led,GPIO.LOW)
 			
 	def _button_callback(self, channel):
 		#debounce
 		if self._last_button_press + datetime.timedelta(0,0.3) < datetime.datetime.now():
 			self._last_button_press = datetime.datetime.now()
-			if channel == thermos_gpio_mode_button:
+			if channel == config.thermos_gpio_mode_button:
 				if self._mode == None or self._mode == "schedule":
 					self._mode = "manual"
 				elif self._mode == "manual":
@@ -100,8 +97,8 @@ class Thermos(Logger):
 				self._config_needs_saving = True
 				self._status_changed = True
 			
-			elif channel == thermos_gpio_up_button or channel == thermos_gpio_down_button:
-				if channel == thermos_gpio_up_button:
+			elif channel == config.thermos_gpio_up_button or channel == config.thermos_gpio_down_button:
+				if channel == config.thermos_gpio_up_button:
 					inc = 1
 				else:
 					inc = -1
@@ -150,13 +147,13 @@ class Thermos(Logger):
 					self._update_hardware()
 					
 				#write status every n minutes anyways.
-				if self._last_status_written + datetime.timedelta(0,60*self._minutes_between_status_updates) < datetime.datetime.now():
+				if self._last_status_written + datetime.timedelta(0,60*config.thermos_status_update_interval) < datetime.datetime.now():
 					self._write_status()
 			
-				if self._last_stats_written + datetime.timedelta(0,60*5) < datetime.datetime.now():
+				if self._last_stats_written + datetime.timedelta(0,60*config.thermos_stats_interval) < datetime.datetime.now():
 					self._write_stats()
 					
-				time.sleep(self._update_interval)
+				time.sleep(config.thermos_update_interval)
 		
 		except KeyboardInterrupt: 
 			self._info("keyboard interrupt, exiting.")
@@ -233,10 +230,10 @@ class Thermos(Logger):
 		
 	def _update_heating(self):			
 		if self._mode == "manual" or self._mode == "schedule":
-			if self._current_temperature + self._margin <= self._scheduled_temperature and (not self._heating or self._heating == None):
+			if self._current_temperature + config.thermos_margin <= self._scheduled_temperature and (not self._heating or self._heating == None):
 				self._heating = True
 				self._status_changed = True
-			if self._current_temperature >= self._scheduled_temperature + self._margin and (self._heating or self._heating == None):
+			if self._current_temperature >= self._scheduled_temperature + config.thermos_margin and (self._heating or self._heating == None):
 				self._heating = False
 				self._status_changed = True
 		else:
@@ -259,6 +256,7 @@ class Thermos(Logger):
 					temp_string = lines[1][equals_pos+2:]
 					temp_c = float(temp_string) / 1000.0
 					self._current_temperature = temp_c
+					self._info("read temperature:"+str(temp_c))
 			else:
 				r = 0.1 * (0.5-random.random())
 				if self._current_temperature+r > 15 and self._current_temperature+r < 25:
@@ -272,20 +270,20 @@ class Thermos(Logger):
 		
 		if THERMOS_HAS_GPIO:
 			if self._heating!=None and self._heating:
-				GPIO.output(thermos_gpio_heating_led,GPIO.HIGH)
+				GPIO.output(config.thermos_gpio_heating_led,GPIO.HIGH)
 			else:
-				GPIO.output(thermos_gpio_heating_led,GPIO.LOW)
+				GPIO.output(config.thermos_gpio_heating_led,GPIO.LOW)
 		
 			if self._mode=="off" or self._mode==None:	
-				GPIO.output(thermos_gpio_schedule_led,GPIO.LOW)
-				GPIO.output(thermos_gpio_manual_led,GPIO.LOW)
+				GPIO.output(config.thermos_gpio_schedule_led,GPIO.LOW)
+				GPIO.output(config.thermos_gpio_manual_led,GPIO.LOW)
 			elif self._mode=="manual":	
-				GPIO.output(thermos_gpio_schedule_led,GPIO.LOW)
-				GPIO.output(thermos_gpio_manual_led,GPIO.HIGH)
+				GPIO.output(config.thermos_gpio_schedule_led,GPIO.LOW)
+				GPIO.output(config.thermos_gpio_manual_led,GPIO.HIGH)
 			else:
 				#schedule
-				GPIO.output(thermos_gpio_schedule_led,GPIO.HIGH)
-				GPIO.output(thermos_gpio_manual_led,GPIO.LOW)
+				GPIO.output(config.thermos_gpio_schedule_led,GPIO.HIGH)
+				GPIO.output(config.thermos_gpio_manual_led,GPIO.LOW)
 			
 
 	def _write_status(self):
@@ -308,7 +306,6 @@ class Thermos(Logger):
 			traceback.print_exc()
 		
 		
-		
 	def _log_status(self):
 		self._info("mode:"+str(self._mode)+" temperature:"+str(self._current_temperature)+" - target:"+str(self._scheduled_temperature)+" - heating:"+str(self._heating)+" - active schedule : " + str(self._active_schedule_entry))
 
@@ -319,7 +316,7 @@ class Thermos(Logger):
 		if(self._mode=="manual"):
 			mode = 1
 		if(self._mode=="schedule"):
-			mode=2
+			mode = 2
 
 		current_temperature = 0
 		if(self._current_temperature!=None):
@@ -335,7 +332,8 @@ class Thermos(Logger):
 			scheduled_temperature = self._scheduled_temperature
 
 		time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-		stat_file = open("data/stats.log", "a")
+		date = datetime.datetime.now().strftime("%Y-%m")
+		stat_file = open("data/stats-"+date+".log", "a")
 		stat_file.write(str(self.unix_time_millis(datetime.datetime.now()))+"\t"+str(mode)+"\t"+str(heating)+"\t"+str(scheduled_temperature)+"\t"+str(current_temperature)+"\n")
 		stat_file.close()
 

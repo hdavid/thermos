@@ -54,9 +54,9 @@ app.get('/restApi.log', function(req, res) {
 	get(req,'logs/restApi.log',res);
 });
 
-app.get('/stats.log', function(req, res) {
+app.get('/stats/:year(\\d+)/:month(\\d+)', function(req, res) {
 	res.setHeader('content-type', 'text/plain');
-	getStats(req,'data/stats.log',res);
+	getStats(req,'data/stats-'+req.params.year+'-'+req.params.month+'.log',res);
 });
 
 

@@ -1,6 +1,8 @@
 #Thermos
 thermos_update_interval = 1
 thermos_margin = 1
+thermos_stats_interval = 10
+thermos_status_update_interval = 1
 
 #GPIO pins
 thermos_gpio_heating_led = 17

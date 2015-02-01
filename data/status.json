@@ -1,13 +1,14 @@
 {
-	"current_temperature":24.7087356038,
+	"heating":true,
+	"current_temperature":17.312,
 	"mode":"manual",
-	"scheduled_temperature":21.0,
+	"scheduled_temperature":18.0,
 	"active_schedule_entry":
 	{
-		"temperature":20.0,
+		"temperature":23.0,
 		"active":"True",
 		"start_time":"09:00",
-		"end_time":"22:01",
-		"days_of_the_week":[5, 6]
+		"end_time":"21:00",
+		"days_of_the_week":[6]
 	}
 }
