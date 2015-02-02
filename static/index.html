@@ -14,49 +14,20 @@
 	<script src="js/jquery.flot.time.js"></script>
 	<script src="js/moment.js"></script>
 
-	
 	<script src="thermos.js" type="text/jsx"></script>
 	
-   	<!--h1>Thermos</h1-->
-
-	<div id='notice'></div>
-	
+	<div id='notice'></div>	
 	<div id="status"></div> 
-	
 	<div id="configForm"></div>
-	
 	<div id="schedule"></div>
-
 	<div id="scheduleEntryForm"></div>
 	
-
-    <script type="text/jsx">
-
-		var rest_api = "";//use ourselves as api url. so we can leave that empty.
-	
-		React.render(
-		  	<ConfigForm url={rest_api+"config.json"} name="config"/>, 
-			document.getElementById('configForm')
-		);
-	
-		React.render(
-			<Status url={rest_api+"status.json"} name="status"/>,
-			document.getElementById('status')
-		);
-
-		React.render(
-			<Schedule url={rest_api+"schedule.json"} name="schedule"/>,
-			document.getElementById('schedule')
-		);
-	
-    </script>
-	
 	<h2>Logs</h2>
-
 	<a href="thermos.log">thermos.log</a>
 	<a href="restApi.log">restApi.log</a>
 	
-	<h2 onClick="requestPlot()">Graph</h2>
+	<h2 onClick="requestPlotData()">Graph</h2>
+
 	<select id='plot-year'>
 		<option value='2015'>2015</option>
 	</select>
@@ -74,7 +45,7 @@
 		<option value='11'>11</option>
 		<option value='12'>12</option>
 	</select>
-	<a onClick="requestPlot(document.getElementById('plot-year').value,document.getElementById('plot-month').value)">load</a>
+	<a onClick="requestPlotData(document.getElementById('plot-year').value,document.getElementById('plot-month').value)">load</a>
 		
 	<span id='oneDay'>1d</span>
 	<span id='twoDays'>2d</span>
@@ -83,27 +54,73 @@
 	
 	<div id="placeholder" class="demo-placeholder" style="width:100%;height:250px"></div>
 
+
+	<script type="text/jsx">
+	
+		React.render(
+		  	<ConfigForm url={"config.json"} name="config"/>, 
+			document.getElementById('configForm')
+		);
+	
+		React.render(
+			<Status url={"status.json"} name="status"/>,
+			document.getElementById('status')
+		);
+
+		React.render(
+			<Schedule url={"schedule.json"} name="schedule"/>,
+			document.getElementById('schedule')
+		);
+	
+    </script>
+	
+
 	<script type="text/javascript">
-		var d;
+
+		var graphData;
+
+		function requestPlotData(year,month){
+			var filename ;
+			if(year && month){
+				filename = 'stats/'+year+"/"+month; 
+			}else{
+				filename = 'stats/'+moment().format('YYYY/MM'); 
+			}
+			$.ajax({
+	      		url: filename,
+	      		dataType: 'json',
+	      		success: function(data) {
+					try {
+						d = data;
+					    plot();
+					} catch(err) {
+						console.error(filename, status, err.message);
+						$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
+					}
+	      		}.bind(this),
+	      		error: function(xhr, status, err) {
+	        		console.error(filename, status, err.toString());
+					$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
+	      		}.bind(this)
+	    	});
+		};
 		
 		function plot(start,end) {
-			var dd = [
-				{ label: "mode", data: d.timeseries[0] },
-				{ label: "heating", data: d.timeseries[1] },
-				{ label: "scheduled", data: d.timeseries[2] },
-				{ label: "actual", data: d.timeseries[3] },
- 			];
-
 			if(!start){
-				start = d.time[0];
+				start = graphData.time[0];
 			}
 			if(!end){
-				end =  d.time[d.time.length-1] 
+				end =  graphData.time[d.time.length-1] 
 			}
 			
 			$.plot(
 				"#placeholder",
-				dd,
+				[
+					{ label: "mode", data: graphData.timeseries[0] },
+					{ label: "heating", data: graphData.timeseries[1] },
+					{ label: "scheduled", data: graphData.timeseries[2] },
+					{ label: "actual", data: graphData.timeseries[3] },
+				],
 				{
 					legend:{           
 						position: 'sw'
@@ -130,64 +147,24 @@
 				border: "0px solid #666666",
 				padding: "3px",
 				color:'#999999',
-				"background-color": "#dddddd",
+				background-color: "#dddddd",
 				opacity: 0.80
 			}).appendTo("body");
 
 			$("#placeholder").bind("plothover", function (event, pos, item) {
-
-				if (false && $("#enablePosition:checked").length > 0) {
-					var str = "(" + pos.x.toFixed(2) + ", " + pos.y.toFixed(2) + ")";
-					$("#hoverdata").text(str);
-				}
-
-				if (true || $("#enableTooltip:checked").length > 0) {
-					if (item) {
-						var x = item.datapoint[0].toFixed(2),
-							y = item.datapoint[1].toFixed(2);
-
-						$("#tooltip").html(item.series.label + " : " + y)
-							.css({top: item.pageY+5, left: item.pageX+5})
-							.fadeIn(200);
-					} else {
-						$("#tooltip").hide();
-					}
-				}
-			});
-
-			$("#placeholder").bind("plotclick", function (event, pos, item) {
 				if (item) {
-					$("#clickdata").text(" - click point " + item.dataIndex + " in " + item.series.label);
-					plot.highlight(item.series, item.datapoint);
+					//var x = item.datapoint[0].toFixed(2);
+					var	y = item.datapoint[1].toFixed(2);
+					$("#tooltip").html(item.series.label + " : " + y)
+						.css({top: item.pageY+5, left: item.pageX+5})
+						.fadeIn(200);
+				} else {
+					$("#tooltip").hide();
 				}
 			});
 		};
 		
-		function requestPlot(year,month){
-			var filename ;
-			if(year && month){
-				filename = 'stats/'+year+"/"+month; 
-			}else{
-				filename = 'stats/'+moment().format('YYYY/MM'); 
-			}
-			$.ajax({
-	      		url: filename,
-	      		dataType: 'json',
-	      		success: function(data) {
-					try {
-						d = data;
-					    plot();
-					} catch(err) {
-						console.error(filename, status, err.message);
-						$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
-					}
-	      		}.bind(this),
-	      		error: function(xhr, status, err) {
-	        		console.error(filename, status, err.toString());
-					$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
-	      		}.bind(this)
-	    	});
-		};
+		
 		
 		$("#oneDay").click(function () {
 			var start = new Date()
@@ -207,6 +184,9 @@
 		$("#allDays").click(function () {
 			plot();
 		});
+
+		requestPlotData();
+
 	</script>
 	
 		
