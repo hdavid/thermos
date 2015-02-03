@@ -33,6 +33,7 @@ class Thermos(Logger):
 		self._status_filename = "data/status.json"
 		self._manual_temperature = None
 		self._config_needs_saving = False
+		self._stats_needs_saving = True
 		self._status_changed = False
 		self._last_button_press = datetime.datetime.now()
 		self._last_status_written = datetime.datetime.now()
@@ -150,8 +151,9 @@ class Thermos(Logger):
 				if self._last_status_written + datetime.timedelta(0,60*config.thermos_status_update_interval) < datetime.datetime.now():
 					self._write_status()
 			
-				if self._last_stats_written + datetime.timedelta(0,60*config.thermos_stats_interval) < datetime.datetime.now():
+				if self._last_stats_written + datetime.timedelta(0,60*config.thermos_stats_interval) < datetime.datetime.now() or self._stats_needs_saving:
 					self._write_stats()
+					self._stats_needs_saving = False
 					
 				time.sleep(config.thermos_update_interval)
 		
@@ -334,7 +336,8 @@ class Thermos(Logger):
 		time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 		date = datetime.datetime.now().strftime("%Y-%m")
 		stat_file = open("data/stats-"+date+".log", "a")
-		stat_file.write(str(self.unix_time_millis(datetime.datetime.now()))+"\t"+str(mode)+"\t"+str(heating)+"\t"+str(scheduled_temperature)+"\t"+str(current_temperature)+"\n")
+		ts = '%i' % self.unix_time_millis(datetime.datetime.now())
+		stat_file.write(ts +"\t"+str(mode)+"\t"+str(heating)+"\t"+str(scheduled_temperature)+"\t"+str(current_temperature)+"\n")
 		stat_file.close()
 
 	def unix_time(self,dt):
