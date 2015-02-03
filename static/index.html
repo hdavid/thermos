@@ -16,9 +16,15 @@
 
 	<script src="thermos.js" type="text/jsx"></script>
 	
-	<div id='notice'></div>	
-	<div id="status"></div> 
+	<div id='notice'></div>
+	
+	<h2>Status</h2>
+	<div id="status"></div>
+	
+	<h2>Config</h2>
 	<div id="configForm"></div>
+	
+	<h2>Schedule</h2>
 	<div id="schedule"></div>
 	<div id="scheduleEntryForm"></div>
 	
@@ -27,7 +33,6 @@
 	<a href="restApi.log">restApi.log</a>
 	
 	<h2 onClick="requestPlotData()">Graph</h2>
-
 	<select id='plot-year'>
 		<option value='2015'>2015</option>
 	</select>
@@ -71,124 +76,12 @@
 			<Schedule url={"schedule.json"} name="schedule"/>,
 			document.getElementById('schedule')
 		);
-	
-    </script>
-	
-
-	<script type="text/javascript">
-
-		var graphData;
-
-		function requestPlotData(year,month){
-			var filename ;
-			if(year && month){
-				filename = 'stats/'+year+"/"+month; 
-			}else{
-				filename = 'stats/'+moment().format('YYYY/MM'); 
-			}
-			$.ajax({
-	      		url: filename,
-	      		dataType: 'json',
-	      		success: function(data) {
-					try {
-						d = data;
-					    plot();
-					} catch(err) {
-						console.error(filename, status, err.message);
-						$('#notice').html("error parsing data for 'stats.log' ! "+err.toString()).show().fadeOut(2000);
-					}
-	      		}.bind(this),
-	      		error: function(xhr, status, err) {
-	        		console.error(filename, status, err.toString());
-					$('#notice').html("error loading 'stats.log' ! "+err.toString()).show().fadeOut(2000);
-	      		}.bind(this)
-	    	});
-		};
 		
-		function plot(start,end) {
-			if(!start){
-				start = graphData.time[0];
-			}
-			if(!end){
-				end =  graphData.time[d.time.length-1] 
-			}
-			
-			$.plot(
-				"#placeholder",
-				[
-					{ label: "mode", data: graphData.timeseries[0] },
-					{ label: "heating", data: graphData.timeseries[1] },
-					{ label: "scheduled", data: graphData.timeseries[2] },
-					{ label: "actual", data: graphData.timeseries[3] },
-				],
-				{
-					legend:{           
-						position: 'sw'
-					},
-					series: {
-						lines: {show: true},
-						points: {show: false}
-					},
-					grid: {
-						hoverable: true,
-						clickable: true,
-						backgroundColor: { colors: ["#999999", "#777777"] }	
-					},
-					xaxis: { 
-						mode: "time",
-						min: start,
-						max: end 
-					}
-				}
-			);
-			$("<div id='tooltip'></div>").css({
-				position: "absolute",
-				display: "none",
-				border: "0px solid #666666",
-				padding: "3px",
-				color:'#999999',
-				background-color: "#dddddd",
-				opacity: 0.80
-			}).appendTo("body");
-
-			$("#placeholder").bind("plothover", function (event, pos, item) {
-				if (item) {
-					//var x = item.datapoint[0].toFixed(2);
-					var	y = item.datapoint[1].toFixed(2);
-					$("#tooltip").html(item.series.label + " : " + y)
-						.css({top: item.pageY+5, left: item.pageX+5})
-						.fadeIn(200);
-				} else {
-					$("#tooltip").hide();
-				}
-			});
-		};
-		
-		
-		
-		$("#oneDay").click(function () {
-			var start = new Date()
-			start.setDate(start.getDate()-1);
-			plot((start).getTime(), (new Date()).getTime());
-		});
-		$("#twoDays").click(function () {
-			var start = new Date()
-			start.setDate(start.getDate()-2);
-			plot((start).getTime(), (new Date()).getTime());
-		});
-		$("#sevenDays").click(function () {
-			var start = new Date()
-			start.setDate(start.getDate()-7);
-			plot((start).getTime(), (new Date()).getTime());
-		});
-		$("#allDays").click(function () {
-			plot();
-		});
+		var graphData;//hold the data for the graph
 
 		requestPlotData();
-
-	</script>
 	
+    </script>
 		
   </body>
 </html>

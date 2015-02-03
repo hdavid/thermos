@@ -1,4 +1,132 @@
 
+/* notification functions */
+function flashNotice(string){
+	$('#notice').html(string).show().fadeOut(3000);
+}
+
+function flashError(string){
+	$('#notice').html("<span class='error'>"+string+"</span>").show().fadeOut(3000);
+}
+
+
+/* flot chart functions */
+function requestPlotData(year,month){
+	var filename ;
+	if(year && month){
+		filename = 'stats/'+year+"/"+month; 
+	}else{
+		filename = 'stats/'+moment().format('YYYY/MM'); 
+	}
+	$.ajax({
+     		url: filename,
+     		dataType: 'json',
+     		success: function(data) {
+			try {
+				graphData = data;
+			    plot();
+			} catch(err) {
+				console.error(filename, status, err.message);
+				flashError("error parsing data for '"+filename+"' ! "+err.toString());
+			}
+     		}.bind(this),
+     		error: function(xhr, status, err) {
+       		console.error(filename, status, err.toString());
+			flashError("error loading '"+filename+"' ! "+err.toString());
+     		}.bind(this)
+   	});
+};
+
+function plot(start,end) {
+	if(!start){
+		start = graphData.time[0];
+	}
+	if(!end){
+		end =  graphData.time[graphData.time.length-1] 
+	}
+	
+	$.plot(
+		"#placeholder",
+		[
+			{ label: "mode", data: graphData.timeseries[0] },
+			{ label: "heating", data: graphData.timeseries[1] },
+			{ label: "scheduled", data: graphData.timeseries[2] },
+			{ label: "actual", data: graphData.timeseries[3] },
+		],
+		{
+			legend:{           
+				position: 'sw'
+			},
+			series: {
+				lines: {show: true},
+				points: {show: false}
+			},
+			grid: {
+				hoverable: true,
+				clickable: true,
+				backgroundColor: { colors: ["#999999", "#777777"] }	
+			},
+			xaxis: { 
+				mode: "time",
+				min: start,
+				max: end 
+			}
+		}
+	);
+	$("<div id='tooltip'></div>").css({
+		position: "absolute",
+		display: "none",
+		border: "0px solid #666666",
+		padding: "3px",
+		color:'#999999',
+		'background-color': "#dddddd",
+		opacity: 0.80
+	}).appendTo("body");
+
+	$("#placeholder").bind("plothover", function (event, pos, item) {
+		if (item) {
+			//var x = item.datapoint[0].toFixed(2);
+			var	y = item.datapoint[1].toFixed(2);
+			$("#tooltip").html(item.series.label + " : " + y)
+				.css({top: item.pageY+5, left: item.pageX+5})
+				.fadeIn(200);
+		} else {
+			$("#tooltip").hide();
+		}
+	});
+};
+
+$("#oneDay").click(function () {
+	var start = new Date()
+	start.setDate(start.getDate()-1);
+	plot((start).getTime());
+});
+$("#twoDays").click(function () {
+	var start = new Date()
+	start.setDate(start.getDate()-2);
+	plot((start).getTime());
+});
+$("#sevenDays").click(function () {
+	var start = new Date()
+	start.setDate(start.getDate()-7);
+	plot((start).getTime());
+});
+$("#allDays").click(function () {
+	plot();
+});
+
+
+/*thermos UI */
+
+var If = React.createClass({
+    render: function() {
+        if (this.props.test) {
+            return this.props.children;
+        } else {
+            return false;
+        }
+    }
+});
+
 var JsonComponent = {
 
 	getInitialState: function() {
@@ -24,12 +152,12 @@ var JsonComponent = {
 				    this.setState(data);
 				} catch(err) {
 					console.error(this.props.url, status, err.message);
-					$('#notice').html("error parsing data for "+this.props.name+" ! "+err.toString()).show().fadeOut(2000);
+					flashError("error parsing data for "+this.props.name+" ! "+err.toString());
 				}
       		}.bind(this),
       		error: function(xhr, status, err) {
         		console.error(this.props.url, status, err.toString());
-				$('#notice').html("error loading "+this.props.name+" ! "+err.toString()).show().fadeOut(2000);
+				flashError("error loading "+this.props.name+" ! "+err.toString());
       		}.bind(this)
     	});
   	},
@@ -42,11 +170,11 @@ var JsonComponent = {
 			contentType: 'application/json',
     		dataType: 'json',
     		success: function(data) {
-				$('#notice').html(this.props.name+" saved !").show().fadeOut(2000);
+				flashNotice(this.props.name+" saved !");
     		}.bind(this),
     		error: function(xhr, status, err) {
       			console.error(this.props.url, status, err.toString());
-				$('#notice').html("error saving "+this.props.name+" ! "+err.toString()).show().fadeOut(2000);
+				flashError("error saving "+this.props.name+" ! "+err.toString());
     		}.bind(this)
   		});
 	}
@@ -70,7 +198,6 @@ var ConfigForm = React.createClass({
 		if(!this.state.mode){
 			return(
 			<div>
-				<h2>Config</h2>
 				Loading...
 			</div>
 			);
@@ -92,18 +219,19 @@ var ConfigForm = React.createClass({
 		//alert(JSON.stringify(this.state));
 		return (
 			<div>
-			<h2>Config</h2>
-		     <div>
 					<input type="radio" style={displayNone} name='mode' value="schedule" id="mode_schedule" defaultChecked={schedule_checked} onChange={this.handleChange} />
 					<label htmlFor="mode_schedule" className={schedule_class}>schedule</label>&nbsp;
 					<input type="radio" style={displayNone} name='mode' value="manual" id="mode_manual" defaultChecked={manual_checked} onChange={this.handleChange}/>
 					<label htmlFor="mode_manual" className={manual_class}>manual</label>&nbsp;
 					<input type="radio" style={displayNone} name='mode' value="off" id="mode_off" defaultChecked={off_checked} onChange={this.handleChange}/>
 					<label htmlFor="mode_off" className={off_class}>off</label>&nbsp;
-					<br/>
-					<label htmlFor='manual_temperature'>manual temperature</label>&nbsp;
-					<input id="manual_temperature" name="manual_temperature" type="text" size="4" defaultValue={manual_temperature} onChange={this.handleChange}/>
-			</div>
+					<If test={manual_checked}>
+						<div>
+							<br/>
+							<label htmlFor='manual_temperature'>manual temperature</label>&nbsp;
+							<input id="manual_temperature" name="manual_temperature" type="text" size="4" defaultValue={manual_temperature} onChange={this.handleChange}/>
+						</div>
+					</If>
 			</div>
 		 );
 	  }
@@ -129,12 +257,12 @@ var Status = React.createClass({
 				    this.setState(data);
 				} catch(err) {
 					console.error(this.props.url, status, err.message);
-					$('#notice').html("error parsing data for "+this.props.name+" ! "+err.toString()).show().fadeOut(2000);
+					flashError("error parsing data for "+this.props.name+" ! "+err.toString());
 				}
       		}.bind(this),
       		error: function(xhr, status, err) {
         		console.error(this.props.url, status, err.toString());
-				$('#notice').html("error loading "+this.props.name+" ! "+err.toString()).show().fadeOut(2000);
+				flashError("error loading "+this.props.name+" ! "+err.toString());
       		}.bind(this)
     	});
 	},
@@ -151,7 +279,6 @@ var Status = React.createClass({
 		if(!this.state.mode){
 			return(
 			<div>
-				<h2>Status</h2>
 				Loading...
 			</div>
 			);
@@ -164,22 +291,27 @@ var Status = React.createClass({
 		var refresh = this.state.refresh;
 		return (
 			<div>
-				<h2>Status</h2>
 				<ul>
 					<li key={current_temperature}>current temperature:{current_temperature}</li>
 					<li key={heating}>heating: {heating}</li>
 					<li key={mode}>mode: {mode}</li>
-					<li>scheduled temperature:{scheduled_temperature}</li>
-					<li>current schedule: {active_schedule_entry?
-						<ScheduleEntry 
-							temperature={active_schedule_entry.temperature} 
-							active={active_schedule_entry.active} 
-							start_time={active_schedule_entry.start_time} 
-							end_time={active_schedule_entry.end_time} 
-							days_of_the_week={active_schedule_entry.days_of_the_week}
-						/>
-						:<div>None</div>
-					}</li>
+					<If test={mode!='off'}>
+						<li>scheduled temperature: {scheduled_temperature}</li>
+					</If>
+					<If test={mode=='schedule'}>
+						<li>current schedule: &nbsp;
+							{active_schedule_entry?
+								<ScheduleEntry 
+									temperature={active_schedule_entry.temperature} 
+									active={active_schedule_entry.active} 
+									start_time={active_schedule_entry.start_time} 
+									end_time={active_schedule_entry.end_time} 
+									days_of_the_week={active_schedule_entry.days_of_the_week}
+								/>
+								:<div>None</div>
+							}
+						</li>
+					</If>
 				</ul>
 			</div>
 		 );
@@ -280,7 +412,8 @@ var ScheduleEntryForm = React.createClass({
 			display: 'none'
 		};
 		return(
-		<div>	
+		<div>
+			<br/>
 			<fieldset>
 				<label htmlFor='active' className={active_class}>{active_text}</label>&nbsp;
 				<input type="checkbox" style={displayNone} name="active" id="active" defaultChecked={active} key={"active"+active} onChange={this.handleChange} />
@@ -409,10 +542,9 @@ var Schedule = React.createClass({
 		}
 		return(
 		 <div>
-			<h2>Schedule</h2>
 			<ul>{rows}</ul>
 			<a href="javascript:void(0)" onClick={this.newEntry}>new entry</a>
-			</div>
+		</div>
 		);
 	}
 });
@@ -443,4 +575,52 @@ var ScheduleEntry = React.createClass({
 			</span>
 		);
 	}
+});
+
+var FileViewer = React.createClass({
+	
+	getInitialState: function() {
+    	return {'refresh':true};
+  	},
+
+	load: function(){
+		$.ajax({
+      		url: this.props.url,
+      		dataType: 'json',
+      		success: function(data) {
+				try {
+				    this.setState(data);
+				} catch(err) {
+					console.error(this.props.url, status, err.message);
+					flashError("error parsing data for "+this.props.url+" ! "+err.toString());
+				}
+      		}.bind(this),
+      		error: function(xhr, status, err) {
+        		console.error(this.props.url, status, err.toString());
+				flashError("error loading "+this.props.url+" ! "+err.toString());
+      		}.bind(this)
+    	});
+	},
+  
+	componentDidMount: function() {
+		this.load();
+  	},
+
+
+	render: function() {
+		if(!this.state.mode){
+			return(
+			<div>
+				Loading...
+			</div>
+			);
+		}
+		var mode = this.state.mode?this.state.mode :'unknown';
+
+		return (
+			<pre>
+				{content}
+			</pre>
+		 );
+  	}
 });

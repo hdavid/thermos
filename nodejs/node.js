@@ -55,7 +55,7 @@ app.get('/restApi.log', function(req, res) {
 });
 
 app.get('/stats/:year(\\d+)/:month(\\d+)', function(req, res) {
-	res.setHeader('content-type', 'text/plain');
+	res.setHeader('content-type', 'application/json');
 	getStats(req,'data/stats-'+req.params.year+'-'+req.params.month+'.log',res);
 });
 
@@ -75,30 +75,35 @@ function get(req, filename, res){
 }
 
 function getStats(req, filename, res){
-	read(req, filename, function(data){
-		time = [];
-		timeseries = [];
-		timeseries[0] = [];
-		timeseries[1] = [];
-		timeseries[2] = [];
-		timeseries[3] = [];
-		
-		lines = data.split("\n");
-		for (i = 0; i < lines.length; i++) {		
-			line = lines[i].split("\t");
-			if(line.length>1){
-				time.push(line[0]);
-				timeseries[0].push([line[0],line[1]]);
-				timeseries[1].push([line[0],line[2]]);
-				timeseries[2].push([line[0],line[3]]);
-				timeseries[3].push([line[0],line[4]]);
+	read(req, filename, 
+		function(data){
+			if(!data){
+				res.status(404).send('Not found');
+				return;
 			}
-		}
-		var tt= {};
-		tt.timeseries = timeseries; 
-		tt.time = time; 
-		res.send(JSON.stringify(tt)); 
-	} 
+			time = [];
+			timeseries = [];
+			timeseries[0] = [];
+			timeseries[1] = [];
+			timeseries[2] = [];
+			timeseries[3] = [];
+		
+			lines = data.split("\n");
+			for (i = 0; i < lines.length; i++) {		
+				line = lines[i].split("\t");
+				if(line.length>1){
+					time.push(line[0]);
+					timeseries[0].push([line[0],line[1]]);
+					timeseries[1].push([line[0],line[2]]);
+					timeseries[2].push([line[0],line[3]]);
+					timeseries[3].push([line[0],line[4]]);
+				}
+			}
+			var tt= {};
+			tt.timeseries = timeseries; 
+			tt.time = time; 
+			res.send(JSON.stringify(tt)); 
+		} 
 	);
 }
 
@@ -106,7 +111,7 @@ function read(req, filename, callback){
 	fs.readFile(__dirname+'/../'+filename, 'utf8', function (err,data) {
 		if (err) {
 			logerror(req,err);
-			return error(err);
+			 //next(err);
 		}
 		info(req,'read file ' + filename);
 		callback(data);

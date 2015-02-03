@@ -16,7 +16,7 @@ body, p, ul, li {
 #notice{
 	position:absolute;
 	left:50%;
-	margin-top:-40px;
+	margin-top:-10px;
 	margin-left:-200px;
 	width:400px;
 	background-color: #777;
@@ -24,6 +24,7 @@ body, p, ul, li {
 	text-align:center;
 	display:none;
 }
+.error{ color:#ff7777;}
 
 input{
 	border:none;
