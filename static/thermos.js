@@ -38,10 +38,11 @@ function requestPlotData(year,month){
 
 function plot(start,end) {
 	if(!start){
-		start = graphData.time[0];
+		//start = graphData.time[0];
+		start =  graphData.time[graphData.time.length-1]-12*60*60*1000;
 	}
 	if(!end){
-		end =  graphData.time[graphData.time.length-1] 
+		end =  graphData.time[graphData.time.length-1];
 	}
 	
 	$.plot(

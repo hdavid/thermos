@@ -33,7 +33,7 @@ class Thermos(Logger):
 		self._status_filename = "data/status.json"
 		self._manual_temperature = None
 		self._config_needs_saving = False
-		self._stats_needs_saving = True
+		self._stats_needs_saving = False
 		self._status_changed = False
 		self._last_button_press = datetime.datetime.now()
 		self._last_status_written = datetime.datetime.now()
@@ -258,7 +258,7 @@ class Thermos(Logger):
 					temp_string = lines[1][equals_pos+2:]
 					temp_c = float(temp_string) / 1000.0
 					self._current_temperature = temp_c
-					self._info("read temperature:"+str(temp_c))
+					#self._info("read temperature:"+str(temp_c))
 			else:
 				r = 0.1 * (0.5-random.random())
 				if self._current_temperature+r > 15 and self._current_temperature+r < 25:

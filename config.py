@@ -5,9 +5,10 @@ thermos_stats_interval = 10
 thermos_status_update_interval = 1
 
 #GPIO pins
-thermos_gpio_heating_led = 17
-thermos_gpio_manual_led = 27
-thermos_gpio_schedule_led = 22
-thermos_gpio_mode_button = 10
-thermos_gpio_up_button = 9
-thermos_gpio_down_button = 11
+thermos_gpio_heating_led = 25
+thermos_gpio_manual_led = 24
+thermos_gpio_schedule_led = 23
+
+thermos_gpio_mode_button = 27
+thermos_gpio_up_button = 18
+thermos_gpio_down_button = 17
