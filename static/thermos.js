@@ -309,7 +309,7 @@ var Status = React.createClass({
 									end_time={active_schedule_entry.end_time} 
 									days_of_the_week={active_schedule_entry.days_of_the_week}
 								/>
-								:<div>None</div>
+								:<span>None</span>
 							}
 						</li>
 					</If>
