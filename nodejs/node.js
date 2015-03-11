@@ -84,19 +84,18 @@ function getStats(req, filename, res){
 			time = [];
 			timeseries = [];
 			timeseries[0] = [];
-			timeseries[1] = [];
-			timeseries[2] = [];
-			timeseries[3] = [];
 		
 			lines = data.split("\n");
 			for (i = 0; i < lines.length; i++) {		
 				line = lines[i].split("\t");
 				if(line.length>1){
 					time.push(line[0]);
-					timeseries[0].push([line[0],line[1]]);
-					timeseries[1].push([line[0],line[2]]);
-					timeseries[2].push([line[0],line[3]]);
-					timeseries[3].push([line[0],line[4]]);
+					for(j = 0; j<line.length-1; j++){
+						if(!timeseries[j]){
+							timeseries[j]=[]
+						}
+						timeseries[j].push([line[0],line[j+1]]);
+					}
 				}
 			}
 			var tt= {};

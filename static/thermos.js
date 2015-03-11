@@ -8,12 +8,15 @@ function flashError(string){
 	$('#notice').html("<span class='error'>"+string+"</span>").show().fadeOut(3000);
 }
 
+var temperature_names = [];
 
 /* flot chart functions */
 function requestPlotData(year,month){
 	var filename ;
+	all = false;
 	if(year && month){
-		filename = 'stats/'+year+"/"+month; 
+		filename = 'stats/'+year+"/"+month;
+		all = true;
 	}else{
 		filename = 'stats/'+moment().format('YYYY/MM'); 
 	}
@@ -23,7 +26,11 @@ function requestPlotData(year,month){
      		success: function(data) {
 			try {
 				graphData = data;
-			    plot();
+				if(all){
+			    	plot();
+				}else{
+					plot(graphData.time[graphData.time.length-1]-12*60*60*1000);	
+				}
 			} catch(err) {
 				console.error(filename, status, err.message);
 				flashError("error parsing data for '"+filename+"' ! "+err.toString());
@@ -38,21 +45,24 @@ function requestPlotData(year,month){
 
 function plot(start,end) {
 	if(!start){
-		//start = graphData.time[0];
-		start =  graphData.time[graphData.time.length-1]-12*60*60*1000;
+		start = graphData.time[0];
 	}
 	if(!end){
 		end =  graphData.time[graphData.time.length-1];
 	}
 	
+	tseries = [
+		{ label: "mode", data: graphData.timeseries[0] },
+		{ label: "heating", data: graphData.timeseries[1] },
+		{ label: "scheduled", data: graphData.timeseries[2] }
+	];
+	for(i=0;i+3<graphData.timeseries.length;i++){
+		tseries[i+3]= { label: !temperature_names[i]?i:temperature_names[i], data: graphData.timeseries[i+3] };
+	}
+	
 	$.plot(
-		"#placeholder",
-		[
-			{ label: "mode", data: graphData.timeseries[0] },
-			{ label: "heating", data: graphData.timeseries[1] },
-			{ label: "scheduled", data: graphData.timeseries[2] },
-			{ label: "actual", data: graphData.timeseries[3] },
-		],
+		"#placeholder", 
+		tseries,
 		{
 			legend:{           
 				position: 'sw'
@@ -286,14 +296,23 @@ var Status = React.createClass({
 		}
 		var mode = this.state.mode?this.state.mode :'unknown';
 		var scheduled_temperature = this.state.scheduled_temperature?this.state.scheduled_temperature:'unknown';
-		var current_temperature = this.state.current_temperature?this.state.current_temperature:'unknown';
+		var current_temperatures = this.state.current_temperatures?this.state.current_temperatures:'unknown';
+		t = "";
+		i = 0;
+		for (var key in current_temperatures) {
+		  if (current_temperatures.hasOwnProperty(key)) {
+		    t += key + " : " + current_temperatures[key]+" ";
+			temperature_names[i] = key;
+			i++;
+		  }
+		}
 		var heating = this.state.heating?"heating":'off';
 		var active_schedule_entry = this.state.active_schedule_entry;
 		var refresh = this.state.refresh;
 		return (
 			<div>
 				<ul>
-					<li key={current_temperature}>current temperature:{current_temperature}</li>
+					<li>current: {t}</li>
 					<li key={heating}>heating: {heating}</li>
 					<li key={mode}>mode: {mode}</li>
 					<If test={mode!='off'}>

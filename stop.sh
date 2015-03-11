@@ -1,5 +1,5 @@
 #!/bin/bash
-killall python
-killall node
+sudo killall python
+sudo killall node
 
 exit 0

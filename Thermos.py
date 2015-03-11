@@ -23,12 +23,12 @@ class Thermos(Logger):
 	def __init__(self):
 		self._schedule_filename = "data/schedule.json"
 		self._schedule = None
-		self._current_temperature = 19
+		self._current_temperatures = {}
 		self._active_schedule_entry = None
 		self._heating = None
 		self._mode = None
 		self._config_filename = "data/config.json"
-		self._temperature_sensor_device_file = None
+		self._temperature_sensor_device_files = {}
 		self._config_file_date = None
 		self._status_filename = "data/status.json"
 		self._manual_temperature = None
@@ -47,11 +47,14 @@ class Thermos(Logger):
 			try:
 				os.system('modprobe w1-gpio')
 				os.system('modprobe w1-therm')
-				base_dir = '/sys/bus/w1/devices/'
-				device_folder = glob.glob(base_dir + '28*')[0]
-				self._temperature_sensor_device_file = device_folder + '/w1_slave'
+				for key in config.thermos_temperature_sensor_sensors.keys():
+					filename = config.thermos_temperature_sensor_directory+ "/" + config.thermos_temperature_sensor_sensors[key] + '/w1_slave'
+					if os.path.isfile(filename):
+						self._temperature_sensor_device_files[key]=filename
+					else:
+						self._error("sensor file '"+filename+"' does not exist.")
 			except:
-				self._error("could not locating temperature sensor file. will use random values for temperature")
+				self._error("could not locate temperature sensor file. will use random values for temperature")
 				
 			#GPIO SETUP
 			GPIO.setmode(GPIO.BCM)
@@ -160,6 +163,8 @@ class Thermos(Logger):
 		except KeyboardInterrupt: 
 			self._info("keyboard interrupt, exiting.")
 			self._cleanup_hardware()
+		except:
+			self._error("error")
 			
 			
 	@property
@@ -232,10 +237,10 @@ class Thermos(Logger):
 		
 	def _update_heating(self):			
 		if self._mode == "manual" or self._mode == "schedule":
-			if self._current_temperature + config.thermos_margin <= self._scheduled_temperature and (not self._heating or self._heating == None):
+			if self._current_temperature() + config.thermos_margin <= self._scheduled_temperature and (not self._heating or self._heating == None):
 				self._heating = True
 				self._status_changed = True
-			if self._current_temperature >= self._scheduled_temperature + config.thermos_margin and (self._heating or self._heating == None):
+			if self._current_temperature() >= self._scheduled_temperature + config.thermos_margin and (self._heating or self._heating == None):
 				self._heating = False
 				self._status_changed = True
 		else:
@@ -243,26 +248,32 @@ class Thermos(Logger):
 				self._heating = False
 				self._status_changed = True
 				
-						
+	def _current_temperature(self):
+		for key in self._current_temperatures.keys():
+			return self._current_temperatures[key]
+							
 	def _read_current_temperature(self):
 		try:
-			if self._temperature_sensor_device_file != None:
-				f = open(self._temperature_sensor_device_file, 'r')
-				lines = f.readlines()
-				f.close()
-				while lines[0].strip()[-3:] != 'YES':
-					time.sleep(0.2)
-					lines = read_temp_raw()
-				equals_pos = lines[1].find('t=')
-				if equals_pos != -1:
-					temp_string = lines[1][equals_pos+2:]
-					temp_c = float(temp_string) / 1000.0
-					self._current_temperature = temp_c
-					#self._info("read temperature:"+str(temp_c))
+			if len(self._temperature_sensor_device_files.keys())>0:
+				for key in self._temperature_sensor_device_files.keys():
+					f = open(self._temperature_sensor_device_files[key], 'r')
+					lines = f.readlines()
+					f.close()
+					while lines[0].strip()[-3:] != 'YES':
+						time.sleep(0.2)
+						lines = read_temp_raw()
+					equals_pos = lines[1].find('t=')
+					if equals_pos != -1:
+						temp_string = lines[1][equals_pos+2:]
+						temp_c = float(temp_string) / 1000.0
+						self._current_temperatures[key] = temp_c
+						#self._info("read temperature "+key+" :"+str(temp_c))
 			else:
 				r = 0.1 * (0.5-random.random())
-				if self._current_temperature+r > 15 and self._current_temperature+r < 25:
-					self._current_temperature = self._current_temperature + r
+				if len(self._current_temperatures.keys())==0:
+					self._current_temperatures["main"] = 19
+				if self._current_temperatures["main"]+r > 15 and self._current_temperatures["main"]+r < 25:
+					self._current_temperatures["main"] = self._current_temperatures["main"] + r
 		except:
 			self._error("could not read temperature from sensor.")
 			traceback.print_exc()
@@ -293,7 +304,14 @@ class Thermos(Logger):
 			out = "{"
 			if(self._heating):
 				out = out + "\n\t\"heating\":true,"
-			out = out + "\n\t\"current_temperature\":"+str(self._current_temperature)+","
+			out = out + "\n\t\"current_temperatures\": {"
+			i = 0;
+			for key in self._current_temperatures.keys():
+				if i>0:
+					out = out + ","
+				i = i+1
+				out = out + "\""+key+"\":\""+str(self._current_temperatures[key])+"\""
+			out = out + "},"
 			out = out + "\n\t\"mode\":\""+str(self._mode)+"\","
 			out = out + "\n\t\"scheduled_temperature\":"+str(self._scheduled_temperature)+""
 			if self._active_schedule_entry!=None:
@@ -309,7 +327,15 @@ class Thermos(Logger):
 		
 		
 	def _log_status(self):
-		self._info("mode:"+str(self._mode)+" temperature:"+str(self._current_temperature)+" - target:"+str(self._scheduled_temperature)+" - heating:"+str(self._heating)+" - active schedule : " + str(self._active_schedule_entry))
+		t = ""
+		i=0
+		for key in self._current_temperatures.keys():
+			if i>0:
+				t = t + ", "
+			i = i+1
+			t = t + key+":"+str(self._current_temperatures[key])
+			
+		self._info("mode:"+str(self._mode)+" - temperatures: "+t+" - target:"+str(self._scheduled_temperature)+" - heating:"+str(self._heating)+" - active schedule : " + str(self._active_schedule_entry))
 
 	def _write_stats(self):
 		self._last_stats_written=datetime.datetime.now()
@@ -320,10 +346,10 @@ class Thermos(Logger):
 		if(self._mode=="schedule"):
 			mode = 2
 
-		current_temperature = 0
-		if(self._current_temperature!=None):
-			current_temperature = self._current_temperature
-
+		out = ""
+		for key in self._current_temperatures.keys():
+			out = out + "\t" + str(self._current_temperatures[key])
+				
 		heating = 0
 		if(self._heating!=None):
 			if(self._heating):
@@ -337,7 +363,7 @@ class Thermos(Logger):
 		date = datetime.datetime.now().strftime("%Y-%m")
 		stat_file = open("data/stats-"+date+".log", "a")
 		ts = '%i' % self.unix_time_millis(datetime.datetime.now())
-		stat_file.write(ts +"\t"+str(mode)+"\t"+str(heating)+"\t"+str(scheduled_temperature)+"\t"+str(current_temperature)+"\n")
+		stat_file.write(ts +"\t"+str(mode)+"\t"+str(heating)+"\t"+str(scheduled_temperature)+out+"\n")
 		stat_file.close()
 
 	def unix_time(self,dt):
