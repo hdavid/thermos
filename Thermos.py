@@ -48,11 +48,19 @@ class Thermos(Logger):
 				os.system('modprobe w1-gpio')
 				os.system('modprobe w1-therm')
 				for key in config.thermos_temperature_sensor_sensors.keys():
-					filename = config.thermos_temperature_sensor_directory+ "/" + config.thermos_temperature_sensor_sensors[key] + '/w1_slave'
-					if os.path.isfile(filename):
-						self._temperature_sensor_device_files[key]=filename
-					else:
-						self._error("sensor file '"+filename+"' does not exist.")
+					max = 4
+					for i in range(max):
+						filename = config.thermos_temperature_sensor_directory+ "/" + config.thermos_temperature_sensor_sensors[key] + '/w1_slave'
+						if os.path.isfile(filename):
+							self._temperature_sensor_device_files[key]=filename
+							self._info("using '"+filename+"' as '"+key+"'")
+							break
+						else:
+							if i==max-1:
+								self._error("sensor file '"+filename+"' does not exist.")
+							else:
+								time.sleep((i+1)*(i+1))
+								self._info("sensor file '"+filename+"' does not exist. will try again in " + str( (i+1)*(i+1) ) + " seconds")
 			except:
 				self._error("could not locate temperature sensor file. will use random values for temperature")
 				
