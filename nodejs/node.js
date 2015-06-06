@@ -1,81 +1,58 @@
 var express = require('express');
 var bodyParser = require('body-parser')
-var _ = require('underscore');
 var basicAuth = require('basic-auth-connect');
 var moment = require('moment');
 var fs = require('fs');
+
 var app = express();
 
-var login = "mots";
-var password = "mots";
-
 app.use(bodyParser.json());
-app.use(basicAuth(login, password));
-app.use('/', express.static(__dirname + '/../static'));
+app.use(basicAuth("mots", "mots"));
+app.use('/', express.static(__dirname + '/public'));
 
-
-app.get('/config.json', function(req, res) {
- 	get(req,'data/config.json',res);
+//json get
+app.get('/:filename(config\.json|status\.json|schedule\.json)', function(req, res) {
+ 	get(req, res, 'data/' + req.params.filename);
 });
 
-app.post('/config.json', function(req, res) {
-	saveJson(req,'data/config.json',req.body);
- 	res.send('{"status":"ok"}');
+//json post
+app.post('/:filename(config\.json|status\.json|schedule\.json)', function(req, res) {
+	save(req, res, 'data/' + req.params.filename, JSON.stringify(req.body));
 });
 
-
-app.post('/status.json', function(req, res) {
-	saveJson(req,'data/status.json',req.body);
- 	res.send('{"status":"ok"}');
-});
-
-app.get('/status.json', function(req, res) {
- 	get(req,'data/status.json',res);
-});
-
-
-app.post('/schedule.json', function(req, res) {
-	saveJson(req,'data/schedule.json',req.body);
- 	res.send('{"status":"ok"}');
-});
-
-app.get('/schedule.json', function(req, res) {
-	get(req,'data/schedule.json',res);
-});
-
-
-app.get('/thermos.log', function(req, res) {
+//logs
+app.get('/:filename([a-zA-Z0-9\-_]+\.log)', function(req, res) {
 	res.setHeader('content-type', 'text/plain');
-	get(req,'logs/thermos.log',res);
+	get(req, res, 'logs/' + req.query.filename);
 });
 
-app.get('/restApi.log', function(req, res) {
-	res.setHeader('content-type', 'text/plain');
-	get(req,'logs/restApi.log',res);
-});
-
+//stats
 app.get('/stats/:year(\\d+)/:month(\\d+)', function(req, res) {
 	res.setHeader('content-type', 'application/json');
-	getStats(req,'data/stats-'+req.params.year+'-'+req.params.month+'.log',res);
+	getStats(req, res, 'data/stats-' + req.params.year + '-' + req.params.month + '.log');
 });
 
 
-function saveJson(req,filename,json){
-	fs.writeFile(__dirname+'/../'+filename, JSON.stringify(json), function(err) {
-	    if(err) {
-	        logerror(req,err);
-	    } else {
-	        info(req,'saved file ' + filename);
-	    }
+//utility file functions
+
+function save(req, res, filename, data){
+	fs.writeFile(__dirname+'/../'+filename, data, function(err) {
+		if(err) {
+			logerror(req,err);
+			res.send('{"status":"ok"}');
+		} else {
+			info(req,'saved file ' + filename);
+			res.send('{"status":"error"}');
+		}
 	});
 }
 
-function get(req, filename, res){
-	read(req, filename, function(data){ res.send(data); } );
+function get(req, res, filename){
+	read(req, res, filename, function(data){ res.send(data); } );
 }
 
-function getStats(req, filename, res){
-	read(req, filename, 
+function getStats(req, res, filename){
+	read(req, res, filename, 
 		function(data){
 			if(!data){
 				res.status(404).send('Not found');
@@ -106,17 +83,19 @@ function getStats(req, filename, res){
 	);
 }
 
-function read(req, filename, callback){
+function read(req, res, filename, callback){
 	fs.readFile(__dirname+'/../'+filename, 'utf8', function (err,data) {
 		if (err) {
-			logerror(req,err);
-			 //next(err);
+			logerror(req, err);
+			res.send('{"status":"error"}');
+		}else{
+			info(req, 'read file ' + filename);
+			callback(data);
 		}
-		info(req,'read file ' + filename);
-		callback(data);
 	});
 }
 
+//logging
 function info(request, message){
 	if(request && request.connection && request.connection.remoteAddress){
 		console.log(getDate()+"\tINFO\t"+request.connection.remoteAddress + "\t"+message);
