@@ -23,7 +23,7 @@ app.post('/:filename(config\.json|status\.json|schedule\.json)', function(req, r
 //logs
 app.get('/:filename([a-zA-Z0-9\-_]+\.log)', function(req, res) {
 	res.setHeader('content-type', 'text/plain');
-	get(req, res, 'logs/' + req.query.filename);
+	get(req, res, 'logs/' + req.params.filename);
 });
 
 //stats
